@@ -1,0 +1,175 @@
+\documentclass[UTF8]{ctexart}
+\usepackage{geometry}
+\usepackage{indentfirst}
+\usepackage{hyperref}
+\usepackage{harpoon}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+% \usepackage{mathpazo}
+\geometry{a4paper, left=1cm, right=1cm, top=2cm, bottom=2cm}
+\setlength{\parindent}{1cm}
+\renewcommand
+\contentsname{Content}
+\title{渲染基础}
+\author{段元兴}
+\date{\today}
+\begin{document}
+    \maketitle
+    \thispagestyle{empty}
+    \setcounter{page}{1}
+    \newpage
+    \tableofcontents
+    \newpage
+        \section{摘要}
+            作为图形学的基本问题,渲染一个场景到图片并非容易.这里将讨论渲染所需要的数学和物理基础.
+            真实世界的光学模型是空间中电磁波在真空和介质中的传播及其与介质相互作用,其中
+            进入人眼的可见波段即为我们所见的光学世界.还有一种描述是用电磁波抽象出的"光线"或"光子"
+            来表述电磁波的传播.由于直接去解电磁学方程来模拟这种模型十分麻烦,故一般采用光线描述
+            来模拟.由此产生了光线追踪及其各种衍生的算法来计算真实光照.
+        \section{辐射度量学}
+            \indent 作为光学的一个分支,辐射度量学被用来衡量图形学中光的各种物理量.一般一根光线
+                (一个光子) 的衡量有其频率,能量,而大量光子则有通量等等概念.下面逐一介绍.
+            \subsection{辐射能量}
+                辐射能量$Q$也是能量的一种形式,即光能,所以其基本单位为$J$.而对于单个光子的辐射能量:
+                \begin{equation}
+                    Q=h\nu.
+                \end{equation}
+            \subsection{辐射通量}
+                \indent 辐射通量$\Phi$即为单位时间通过某截面的所有光子的能量的总和,其单位为$W$.故可以定义:
+                \begin{equation}
+                    \Phi=\frac{dQ}{dt}.
+                \end{equation}
+                \indent 当然,光子不是无穷快的,若截面在移动,则其接收到的光子数会发生变化.但是一般情况的渲
+                染基本上认为物体移动的速度远小于光速,故认为截面不变.
+            \subsection{辐照度}
+                \indent 辐照度$E$即为单位面积上的辐射通量.:
+                \begin{equation}
+                    E=\frac{d\Phi}{dA}.
+                \end{equation}
+                \indent 考虑这样一个情况:一束平行光垂直入射某个平面时其辐照度为$E_\perp$,当其以
+                入射角$\theta$射入另一个平面上时,由于辐射通量不变而面积变为$\frac{A_\perp}{\cos \theta}$,
+                故:
+                \begin{equation}
+                    E=E_\perp \cos \theta.
+                \end{equation}
+            \subsection{辐射强度}
+                \indent 为了衡量某光源元(体光源,面光源或点光源)对特定方向的辐射强度,定义辐射强度:
+                \begin{equation}
+                    I=\frac{d\Phi}{d\omega};
+                \end{equation}
+                即该光源对某方向单位立体角的辐射通量.
+            \subsection{辐射率}
+                \indent 只有辐射强度并不足以描述一个光源的具体信息,例如这是个面光源,其上的各个面元的辐
+                射强度各不相同,故定义辐射率:
+                \begin{equation}
+                    L=\frac{dI}{dA}=\frac{dE}{d\omega}=\frac{d^2\Phi}{dA d\omega}.
+                \end{equation}
+                \indent 定理:一束光线在传播的过程中辐射率不会改变:
+                \begin{equation}
+                    L=L_0.
+                \end{equation}
+                \indent 证明:设这束光线在传播了距离$r$的过程中垂直截面从$dA_1$扩张到$dA_2$.则1对2的辐射率
+                \begin{equation}
+                    L_1=\frac{r^2d\Phi_{12}}{dA_1 dA_2}.
+                \end{equation}
+                由于这个等式右侧关于1,2对称,故$L_1=L_2$,得证.
+        \section{光与物体表面的相互作用}
+            \subsection{双向反射分布函数}
+                \indent 现考虑一个小面元$dA(\overrightarrow{r})$,设其自发光的辐射率是$L(\overrightarrow{r},\omega)$.
+                而设这个面元对入射光线的作用为:$f$,即出射光线方向$\omega_j$的辐射率$dL_j$
+                为入射光线方向$\omega_i$的单位立体角的垂直辐照度$dE_i$的$f(\omega_i,\omega_j)$倍:
+                \begin{equation}
+                    dL_j=f(\omega_i,\omega_j)dE_i=f(\omega_i,\omega_j)L_i\cos\theta_id\omega_i.
+                \end{equation}
+                \indent 这个函数被称为双向反射分布函数 (bidirectional reflectance distribution function, BRDF),
+                而物理限制了这个函数的一些性质:\\
+                \indent 1.赫姆霍兹互反律:
+                \begin{equation}
+                    f(\omega_i,\omega_j)=f(\omega_j,\omega_i).
+                \end{equation}
+                这个定律类似于光学中的光路可逆.\\
+                \indent 2.能量守恒:
+                \begin{equation}
+                    \int_\Omega{f(\omega_i,\omega_j)\cos{\theta_i}d\omega_i}\leqslant 1
+                \end{equation}
+            \subsection{菲涅尔公式}
+                \indent 对于从某个折射率为$1$的介质1进入折射率为$n$的介质2的光线,设入射角为$i_0$,
+                折射角为$i_1$.设入射的辐照度为$dE_0$,入射的辐射率为$L$,则:
+                \begin{equation}
+                    dE_0=\delta(i-i_0)L(\omega)\cos{i}d\omega.
+                \end{equation}
+                积分可得:
+                \begin{equation}
+                    \int_\Omega{\delta(i-i_0)L(\omega)\cos{i}d\omega}=E_0
+                \end{equation}
+                为总的入射辐照度,即:
+                \begin{equation}
+                    L(\omega)=\frac{\delta(i-i_0)E_0}{2\pi\cos{i}}.
+                \end{equation}
+                \indent 由菲涅尔公式可知,在自然光假设的条件下(所有偏振方向的振幅相同),其BRDF函数为:
+                \begin{equation}
+                    \begin{array}{c}
+                    f_r(\omega_0,\omega)=r\delta(i-i_0),\\
+                    r=\frac{1}{2}\left[\left(\frac{\cos{i_1}-n\cos{i_0}}{n\cos{i_0}+\cos{i_1}}\right)^2+
+                    \left(\frac{n\cos{i_1}-\cos{i_0}}{\cos{i_0}+n\cos{i_1}}\right)^2\right].
+                    \end{array}
+                \end{equation}
+                对两边同时积分可得:
+                \begin{equation}
+                    \int_\Omega{L_r(\omega)\cos{i}d\omega}
+                    =\int_\Omega{f_r(\omega',\omega)L(\omega')\cos{i}d\omega}\\
+                    =\int_\Omega{r\delta(i-i_0)\frac{\delta(i'-i_0)E_0}{2\pi\cos{i'}}\cos{i}d\omega}
+                    =rE_0
+                \end{equation}
+                为反射的总辐照度.\\
+                \indent 而现在则可以利用能量守恒来计算透射BRDF:
+                \begin{equation}
+                    \int_\Omega{L_t(\omega)\cos{i}d\omega}=\int_\Omega{f_t(\omega',\omega)L(\omega')\cos{i}d\omega}=E_0(1-r).
+                \end{equation}
+                而我们又可以假设$f_t$的形式为:
+                \begin{equation}
+                    f_t(\omega',\omega)=t\delta(\omega'-\omega_0)\delta(\omega-\omega_1),
+                \end{equation}
+                代入得:
+                \begin{equation}
+                    \int_\Omega{t\delta(\omega'-\omega_0)\delta(\omega-\omega_1)
+                    \frac{\delta(i'-i_0)E_0}{2\pi\cos{i'}}\cos{i}d\omega}=E_0(1-r),
+                \end{equation}
+                即:
+                \begin{equation}
+                    t=\frac{\cos{i_1}}{\cos{i_0}}(1-r).
+                \end{equation}
+        \section{光线与介质体的相互作用}
+            \subsection{介质体对光线的吸收}
+                \indent 显然光线在介质中传播时会衰减,一般这个衰减比例是只和传播
+                的距离和介质相关的,即我们可以假设:
+                \begin{equation}
+                    dL=-\alpha Ldx,
+                \end{equation}
+                由此可以解得:
+                \begin{equation}
+                    L=L_0e^{-\alpha x},
+                \end{equation}
+                其中$x$为传播的距离,$\alpha$是与介质相关的衰减系数.
+            \subsection{介质对光线的散射}
+                \indent 介质中的光线不是一成不变的沿直线传播的,期间会与介质分子发生散射:
+                瑞利散射和米氏散射等等.这里简化模型,仅仅考虑瑞利散射模型.\\
+                \indent 瑞利指出:在$\frac{\lambda}{10}$量级的颗粒散射下,散射光强的分布如下:
+                \begin{equation}
+                    I(\omega)\propto\omega^4(1+\cos^2{\theta}),
+                \end{equation}
+                其中$\omega$是光的角频率,$\theta$是散射角.于是在考虑光线在介质传播的时候可
+                以将一部分光线散射出去进行计算以获取更真实的基于物理的渲染.
+        \section{渲染方程}
+            \indent 在大量的实践过程中,人们发现以面元作为基本图形元素能大量减少
+            模拟所需要的计算量,于是基于面元的渲染方式时目前的主流,并将在很长一段时间内仍然时主流.\\
+            \indent 由此可以得出一般的渲染方程:
+            \begin{equation}
+                L(\overrightarrow{r_j},\omega_j)=L_e(\overrightarrow{r_j},\omega_j)+
+                \int_\Omega{L(\overrightarrow{r_i},\omega_i)f(\overrightarrow{r_j},
+                \omega_i,\omega_j)\cos\theta_id\omega_i}.
+            \end{equation}
+            \indent 当然若要实现基于物理的真实渲染,BRDF函数需要考虑以上的各种光与介质表面的相互作用,
+            而且若是用路径追踪的方法来计算,还需要考虑光线在传播过程中与介质体的相互作用等等.
+\end{document}
