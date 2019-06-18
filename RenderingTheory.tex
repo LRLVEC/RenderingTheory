@@ -166,10 +166,77 @@
             模拟所需要的计算量,于是基于面元的渲染方式时目前的主流,并将在很长一段时间内仍然时主流.\\
             \indent 由此可以得出一般的渲染方程:
             \begin{equation}
-                L(\overrightarrow{r_j},\omega_j)=L_e(\overrightarrow{r_j},\omega_j)+
-                \int_\Omega{L(\overrightarrow{r_i},\omega_i)f(\overrightarrow{r_j},
+                L_{\overrightarrow{r_j}}(\omega_j)=L_{ej}(\omega_j)+
+                \int_\Omega{L_{\overrightarrow{r_i}}(\omega_i)f(
                 \omega_i,\omega_j)\cos\theta_id\omega_i}.
             \end{equation}
             \indent 当然若要实现基于物理的真实渲染,BRDF函数需要考虑以上的各种光与介质表面的相互作用,
             而且若是用路径追踪的方法来计算,还需要考虑光线在传播过程中与介质体的相互作用等等.
+        \section{一种计算辐射率的方法}
+            \indent 可以看出,渲染方程中的积分是对正半球空间立体角的积分.显然一般情况下我们不能直接
+            获得任意方向 $\omega_i$ 上来自 $\overrightarrow{r_i}$ 的辐射率 $L_{\overrightarrow{r_i}}(\omega_i)$
+            关于 $\omega_i$ 的直接函数关系(但是这并不妨碍我们对某确定 $\omega_i$ 计算出该方向上的辐射率),因此
+            需要用别的积分方式来间接计算这个值.联想到投针法来计算圆周率,很容易明白蒙特卡洛积分的一般思想.
+            \subsection{蒙特卡洛积分法}
+                \subsubsection{投针法测圆周率}
+                    \indent 先来看看投针法计算圆周率.在区间$I=[0,1]\times[0,1]$上有一个以1为半径的$\frac{1}{4}$圆周,
+                    现在随机往$I$内部投针,若你均匀投针,则显然投进任意一个小区间$dxdy$的概率为:
+                    \begin{equation}
+                        dp(x,y)=dxdy,
+                    \end{equation}
+                    而若我们设一函数:
+                    \begin{equation}
+                        g(x,y)=
+                        \left\{
+                        \begin{array}{lc}
+                            1,&x^2+y^2<1\\
+                            0,&x^2+y^2>1\\
+                        \end{array}
+                        \right.,
+                    \end{equation}
+                    若采样$N$次,第$i$次采样时的结果为$k_i$,
+                    则在区间$I$内在均匀投针时$g$的期望,也即对面积的期望(由于均匀投针)为:
+                    \begin{equation}
+                        E(g)=\frac{\int_I{g(x,y)dp}}{\int_I dp}
+                        =\lim_{N\leftrightarrow\infty}{\frac{1}{N}\sum_{i=1}^{N}{k_i}}
+                        =\frac{\pi}{4},
+                    \end{equation}
+                    便求出了$\pi$.\\
+                    \indent 但是还没结束,因为投针时你可能手残无法保证能均匀的投进$I$,所以实际上投进任意
+                    一个小区间$dxdy$的概率为:
+                    \begin{equation}
+                        dp(x,y)=f(x,y)dxdy,
+                    \end{equation}
+                    从而在区间$I$内在按照概率密度$f(x,y)$投针时$g$的期望为:
+                    \begin{equation}
+                        E(g)=\frac{\int_I{g(x,y)f(x,y)dxdy}}{\int_I f(x,y)dxdy}
+                        =\lim_{N\leftrightarrow\infty}{\frac{1}{N}\sum_{i=1}^{N}{k_i'}}
+                        \neq\frac{\pi}{4},
+                    \end{equation}
+                    不符合我们需要计算面积的要求.\\
+                    \indent 那么如何改进呢?假设你手抖的很有规律以至于可以通过某
+                    种方式获得$f(x,y)$,则可以用如下方式消除手抖带来的影响:\\
+                    \indent 取
+                    \begin{equation}
+                        h(x,y)=\frac{g(x,y)}{f(x,y)},
+                    \end{equation}
+                    则在区间$I$内在均匀投针时$h$的期望为:
+                    \begin{equation}
+                        E(h)=\frac{\int_I{h(x,y)dxdy}}{\int_I f(x,y)dxdy}
+                        =\lim_{N\leftrightarrow\infty}{\frac{1}{N}\sum_{i=1}^{N}{\frac{k_i''}{f(x_i,y_i)}}}
+                        =\frac{\pi}{4},
+                    \end{equation}
+                    于是又可以愉快的计算$\pi$了!
+                \subsubsection{推广}
+                    \indent 有了上面投针法的方法,我们可以推广到任何想要计算的的积分!\\
+                    \indent 对于某被积函数$g(\overrightarrow{x})$,其在被积区间$V$上的积分为:
+                    \begin{equation}
+                        \int_V{g(\overrightarrow{x})d\overrightarrow{x}}
+                        =\lim_{N\leftrightarrow\infty}{\frac{1}{N}
+                        \sum_{i=1}^{N}{\frac{k_i}{f(\overrightarrow{x_i})}}},
+                    \end{equation}
+                    其中$f(\overrightarrow{x_i})$是第$i$次采样时在$\overrightarrow{x_i}$处的概率密度,满足:
+                    \begin{equation}
+                        \int_V{f(\overrightarrow{x})d\overrightarrow{x}}=1.
+                    \end{equation}
 \end{document}
